@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'screens/statistics_dashboard.dart';
 
 class FacultyDashboard extends StatefulWidget {
   const FacultyDashboard({super.key});
@@ -74,10 +75,15 @@ class _FacultyDashboardState extends State<FacultyDashboard> {
                     ),
                     _buildDashboardCard(
                       icon: Icons.pie_chart,
-                      title: "Analytics",
-                      subtitle: "Track attendance and metrics",
+                      title: "Statistical Analysis",
+                      subtitle: "Performance metrics & validation",
                       onTap: () {
-                        // Navigate to analytics
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => StatisticsDashboard(),
+                          ),
+                        );
                       },
                     ),
                   ],

@@ -9,6 +9,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:math';
+import 'performance_metrics_service.dart';
 
 class RealFaceRecognitionService {
   static final RealFaceRecognitionService _instance = RealFaceRecognitionService._internal();
@@ -19,6 +20,7 @@ class RealFaceRecognitionService {
   String? _deviceId;
   bool _isInitialized = false;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final PerformanceMetricsService _metricsService = PerformanceMetricsService();
 
   // Face recognition parameters
   static const int _inputSize = 112; // Standard face recognition input size
@@ -91,6 +93,7 @@ class RealFaceRecognitionService {
   }
 
   Future<List<double>?> extractFaceEmbeddingFromFile(String imagePath) async {
+    final stopwatch = Stopwatch()..start();
     try {
       _logger.i('Extracting face embedding from file: $imagePath');
 
@@ -111,7 +114,11 @@ class RealFaceRecognitionService {
         return null;
       }
 
-      _logger.i('Face embedding extracted successfully from file');
+      stopwatch.stop();
+      final timeInSeconds = stopwatch.elapsedMilliseconds / 1000.0;
+      await _metricsService.recordEmbeddingTime(timeInSeconds);
+
+      _logger.i('Face embedding extracted successfully from file (${timeInSeconds.toStringAsFixed(3)}s)');
       return embedding;
     } catch (e) {
       _logger.e('Error extracting face embedding from file: $e');
@@ -239,18 +246,31 @@ class RealFaceRecognitionService {
   }
 
   Future<bool> verifyFace(List<double> currentEmbedding, List<double> storedEmbedding) async {
+    final stopwatch = Stopwatch()..start();
     try {
       if (currentEmbedding.length != storedEmbedding.length) {
         _logger.e('Embedding size mismatch: ${currentEmbedding.length} vs ${storedEmbedding.length}');
+        stopwatch.stop();
         return false;
       }
 
       final similarity = calculateCosineSimilarity(currentEmbedding, storedEmbedding);
       _logger.d('Face similarity: $similarity (threshold: $_faceThreshold)');
 
-      return similarity >= _faceThreshold;
+      final isVerified = similarity >= _faceThreshold;
+      stopwatch.stop();
+      final timeInSeconds = stopwatch.elapsedMilliseconds / 1000.0;
+      
+      await _metricsService.recordVerificationTime(timeInSeconds);
+      
+      if (!isVerified) {
+        await _metricsService.recordFraudAttempt(reason: 'Similarity ${similarity.toStringAsFixed(3)} below threshold ${_faceThreshold}');
+      }
+
+      return isVerified;
     } catch (e) {
       _logger.e('Error verifying face: $e');
+      stopwatch.stop();
       return false;
     }
   }
