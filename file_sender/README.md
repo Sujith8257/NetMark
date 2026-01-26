@@ -80,6 +80,13 @@ NetMark is a comprehensive attendance management system designed for educational
 - [📄 Runtime Data Files](#-runtime-data-files) - CSV file formats and usage
 - [📝 logs.csv](#-logscsv) - Face verification performance logs
 - [✅ verified_ids.csv](#-verified_idscsv) - Attendance records
+- [📁 stress_test_logs/](#-stress-test-logs-directory) - Stress testing execution logs
+
+### 🧪 Testing & Code
+- [🧪 Testing & Stress Testing](#-testing--stress-testing) - Complete testing documentation
+- [📁 stress_test_logs/](#-stress-test-logs-directory) - Test execution logs directory
+- [🔧 Testing Scripts](#-testing-scripts) - load_test.py, find_breaking_point.py
+- [🚨 Breaking Point Analysis](#-breaking-point-analysis) - System limits and failure points
 
 ---
 
@@ -136,10 +143,21 @@ FAST_Attendance/
 ├── 🐍 Server_regNoSend.py       # Main Flask server
 ├── 🐍 server.py                 # Minimal Flask example (not used)
 │
+├── 🧪 Testing Scripts
+│   ├── load_test.py             # Load testing script
+│   ├── find_breaking_point.py   # Breaking point analysis script
+│   ├── run_stress_tests.ps1     # Automated test suite (Windows)
+│   └── run_stress_tests.sh      # Automated test suite (Linux/macOS)
+│
 └── 📄 Runtime-generated files (local backup/offline storage)
     ├── user_data.csv            # Uploaded class list
     ├── verified_ids.csv         # Attendance records
-    └── ip_tracking.csv          # IP tracking for duplicate prevention
+    ├── ip_tracking.csv          # IP tracking for duplicate prevention
+    ├── logs.csv                 # Face verification performance logs
+    ├── scalability_metrics.csv # Server-side scalability metrics
+    ├── breaking_point_results.json # Breaking point test results
+    └── 📁 stress_test_logs/     # Stress testing execution logs
+        └── load_test_*users_*.log # Timestamped test logs
 ```
 
 ### 📋 Runtime-Generated Files
@@ -152,6 +170,9 @@ These CSV files are created at runtime as **local backups** for offline operatio
 | `verified_ids.csv` | Attendance records (present students + timestamps) | `Registration Number`, `Timestamp`, `IP` |
 | `ip_tracking.csv` | IP tracking for duplicate prevention | `IP`, `Timestamp` |
 | `logs.csv` | Face verification performance logs | `Registration Number`, `Timestamp`, `Face Verification Time (Seconds)` |
+| `scalability_metrics.csv` | Server-side scalability metrics (accumulated) | `Timestamp`, `Endpoint`, `Concurrent Users`, `Response Times`, `Throughput`, etc. |
+| `breaking_point_results.json` | Breaking point test results | JSON with test configuration and results for each load level |
+| `stress_test_logs/` | Directory containing all test execution logs | `load_test_{users}users_{timestamp}.log` files |
 
 > 💡 **Note**: When network connectivity is available, data automatically syncs to the cloud server.
 
@@ -1377,13 +1398,84 @@ The following results were obtained from empirical stress testing:
    - **Recommended limit**: 20-50 concurrent users for typical classroom environments
    - **Maximum capacity**: 150-200 concurrent users for production use
 
-### 📝 Test Logs
+### 📁 Stress Test Logs Directory
+
+**Location**: `stress_test_logs/` (project root directory)
+
+All test executions are automatically logged to this directory with timestamped filenames.
+
+#### **Directory Structure**
+
+```
+stress_test_logs/
+├── load_test_5users_20260126_163902.log
+├── load_test_10users_20260126_163902.log
+├── load_test_20users_20260126_163859.log
+├── load_test_50users_20260126_163902.log
+├── load_test_100users_20260126_163902.log
+└── ... (additional test logs)
+```
+
+#### **Log File Naming Convention**
+
+Format: `load_test_{concurrent_users}users_{timestamp}.log`
+
+- `{concurrent_users}`: Number of concurrent users tested (e.g., 5, 10, 20, 50, 100)
+- `{timestamp}`: Test execution timestamp in format `YYYYMMDD_HHMMSS`
+
+**Example**: `load_test_20users_20260126_163902.log` = Test with 20 concurrent users, executed on January 26, 2026 at 16:39:02
+
+#### **Log File Contents**
+
+Each log file contains:
+- ✅ **Test configuration**: Base URL, endpoint, concurrent users, requests per user
+- ✅ **Start/end timestamps**: Test execution times
+- ✅ **Real-time progress**: Request execution updates
+- ✅ **Complete results**: Success/failure counts, response times, throughput
+- ✅ **Error details**: Connection errors, timeouts, HTTP errors
+- ✅ **Server tracking status**: Whether server-side metrics were enabled
+- ✅ **File save confirmations**: Locations of saved JSON results
+
+#### **Accessing Log Files**
+
+**Windows (PowerShell)**:
+```powershell
+# View all log files
+Get-ChildItem stress_test_logs\*.log
+
+# View latest log
+Get-ChildItem stress_test_logs\*.log | Sort-Object LastWriteTime -Descending | Select-Object -First 1 | Get-Content
+
+# View specific test log
+Get-Content stress_test_logs\load_test_20users_*.log
+```
+
+**Linux/macOS (Bash)**:
+```bash
+# View all log files
+ls -lh stress_test_logs/*.log
+
+# View latest log
+ls -t stress_test_logs/*.log | head -1 | xargs cat
+
+# View specific test log
+cat stress_test_logs/load_test_20users_*.log
+```
+
+#### **Log File Location**
+
+- **Default location**: Project root directory (`D:\NetMark\stress_test_logs\` on Windows)
+- **Auto-created**: Directory is automatically created when first test runs
+- **Persistent**: Logs are saved permanently for analysis and review
+
+### 📝 Test Logs Summary
 
 All test executions are automatically logged:
 
 - **Log files**: `stress_test_logs/load_test_{users}users_{timestamp}.log`
-- **Results**: `load_test_{users}users.json`
-- **Server metrics**: `scalability_metrics.csv` (accumulated)
+- **Results**: `load_test_{users}users.json` (project root)
+- **Server metrics**: `scalability_metrics.csv` (project root, accumulated)
+- **Breaking point results**: `breaking_point_results.json` (project root)
 
 **Example log entry**:
 ```
@@ -1405,9 +1497,33 @@ All test executions are automatically logged:
 [2026-01-26 16:39:03] ✅ Results saved to load_test_5users.json
 ```
 
-### 🛠️ Testing Tools
+### 🛠️ Testing Tools & Code
 
-#### **Load Testing Script** (`load_test.py`)
+#### **Testing Scripts Overview**
+
+The stress testing infrastructure consists of several Python scripts:
+
+| Script | Purpose | Location |
+|--------|---------|----------|
+| `load_test.py` | Controlled concurrent request testing | Project root |
+| `find_breaking_point.py` | Progressive load testing to identify system limits | Project root |
+| `run_stress_tests.ps1` | Automated test suite (Windows PowerShell) | Project root |
+| `run_stress_tests.sh` | Automated test suite (Linux/macOS Bash) | Project root |
+
+#### **1. Load Testing Script** (`load_test.py`)
+
+**📍 Location**: Project root directory (`D:\NetMark\load_test.py`)
+
+**🎯 Purpose**: Performs controlled stress testing with configurable concurrent requests.
+
+**Key Features**:
+- ✅ Controlled concurrent request generation
+- ✅ Configurable users and requests per user
+- ✅ Response time statistics (mean, median, P95, P99)
+- ✅ Error tracking (timeouts, connection errors, HTTP errors)
+- ✅ JSON report generation
+- ✅ Automatic log file creation
+- ✅ Integration with server-side tracking
 
 **Usage**:
 ```bash
@@ -1430,7 +1546,122 @@ python load_test.py \
 - `--delay`: Delay between requests in seconds (default: 0.1)
 - `--server-tracking`: Enable server-side metrics collection
 - `--output`: Output JSON file (default: load_test_results.json)
-- `--log-file`: Log file path (auto-generated if not specified)
+- `--log-file`: Log file path (auto-generated if not specified, saved to `stress_test_logs/`)
+
+**Output Files**:
+- JSON results: `load_test_{users}users.json` (project root)
+- Log file: `stress_test_logs/load_test_{users}users_{timestamp}.log`
+
+**Code Structure**:
+```python
+class LoadTester:
+    - make_request(): Single HTTP request with timing
+    - run_test(): Execute load test with concurrent users
+    - print_report(): Display formatted results
+    - save_report(): Save JSON results
+    - save_logs(): Save console output to log file
+```
+
+#### **2. Breaking Point Finder** (`find_breaking_point.py`)
+
+**📍 Location**: Project root directory (`D:\NetMark\find_breaking_point.py`)
+
+**🎯 Purpose**: Identifies system breaking point by testing progressively higher loads.
+
+**Key Features**:
+- ✅ Progressive load testing (incremental concurrent users)
+- ✅ Automatic breaking point detection (success rate < 95%)
+- ✅ Detailed error tracking (timeouts, connection errors, HTTP errors)
+- ✅ Comprehensive statistics for each load level
+- ✅ JSON report with all test results
+
+**Usage**:
+```bash
+python find_breaking_point.py \
+    --start 100 \
+    --max 500 \
+    --step 50 \
+    --requests 5 \
+    --url http://127.0.0.1:5000 \
+    --endpoint /attendance_stats \
+    --output breaking_point_results.json
+```
+
+**Parameters**:
+- `--start`: Starting number of concurrent users (default: 100)
+- `--max`: Maximum concurrent users to test (default: 1000)
+- `--step`: Increment step for concurrent users (default: 50)
+- `--requests`: Requests per user (default: 5)
+- `--url`: Server base URL (default: http://127.0.0.1:5000)
+- `--endpoint`: Endpoint to test (default: /attendance_stats)
+- `--output`: Output JSON file (default: breaking_point_results.json)
+
+**Output Files**:
+- JSON results: `breaking_point_results.json` (project root)
+- Console output: Shows breaking point when detected
+
+**Code Structure**:
+```python
+class BreakingPointTester:
+    - make_request(): Single HTTP request with error handling
+    - test_load(): Test specific load level
+    - print_results(): Display results and detect breaking point
+```
+
+#### **3. Automated Test Suites**
+
+**Windows PowerShell** (`run_stress_tests.ps1`):
+- **Location**: Project root directory
+- **Purpose**: Runs multiple load tests with increasing concurrent users (5, 10, 20, 50, 100)
+- **Usage**: `.\run_stress_tests.ps1`
+- **Output**: Creates log files in `stress_test_logs/` and JSON results in project root
+
+**Linux/macOS Bash** (`run_stress_tests.sh`):
+- **Location**: Project root directory
+- **Purpose**: Same as PowerShell version, for Unix-like systems
+- **Usage**: `chmod +x run_stress_tests.sh && ./run_stress_tests.sh`
+- **Output**: Creates log files in `stress_test_logs/` and JSON results in project root
+
+#### **4. Server-Side Code** (`Server_regNoSend.py`)
+
+**📍 Location**: Project root directory (`D:\NetMark\Server_regNoSend.py`)
+
+**🎯 Stress Testing Features**:
+- ✅ Automatic response time tracking via `before_request` and `after_request` hooks
+- ✅ Thread-safe metrics storage
+- ✅ Stress test control endpoints
+- ✅ Scalability metrics and report generation
+
+**Relevant Code Sections**:
+- **Lines 22-30**: Metrics storage structure (`_scalability_metrics`)
+- **Lines 79-95**: Request/response hooks for automatic tracking
+- **Lines 379-429**: Stress test control endpoints (`/stress_test/start`, `/stress_test/stop`)
+- **Lines 431-465**: Metrics endpoint (`/scalability_metrics`)
+- **Lines 467-520**: Report generation (`/scalability_report`)
+- **Lines 524-560**: CSV export function (`_save_scalability_report`)
+
+**Key Functions**:
+```python
+@app.before_request
+def before_request():
+    # Start timing for each request
+
+@app.after_request  
+def after_request(response):
+    # Record response time and update metrics
+
+@app.route('/stress_test/start', methods=['POST'])
+def start_stress_test():
+    # Start tracking metrics
+
+@app.route('/scalability_metrics', methods=['GET'])
+def get_scalability_metrics():
+    # Return current metrics
+
+@app.route('/scalability_report', methods=['GET'])
+def generate_scalability_report():
+    # Generate comprehensive report
+```
 
 #### **Server-Side Metrics Endpoints**
 
@@ -1486,11 +1717,17 @@ This script tests progressively higher loads until the breaking point is identif
 
 ### 📚 Additional Resources
 
-- **`STRESS_TESTING_GUIDE.md`** - Complete stress testing guide
-- **`test_stress_testing.md`** - Quick test guide
+- **`STRESS_TESTING_GUIDE.md`** - Complete stress testing guide with methodology
+- **`test_stress_testing.md`** - Quick test guide for running tests
 - **`REVIEWER_RESPONSE_SCALABILITY.md`** - Comprehensive response to reviewer concerns
 - **`SCALABILITY_SUMMARY.md`** - Quick reference for scalability findings
-- **`find_breaking_point.py`** - Script to identify system breaking points
+- **`load_test.py`** - Load testing script source code
+- **`find_breaking_point.py`** - Breaking point analysis script source code
+- **`run_stress_tests.ps1`** - Automated test suite (Windows)
+- **`run_stress_tests.sh`** - Automated test suite (Linux/macOS)
+- **`stress_test_logs/`** - Directory containing all test execution logs
+- **`breaking_point_results.json`** - Breaking point test results
+- **`scalability_metrics.csv`** - Server-side accumulated metrics
 
 ### ✅ Validation
 
