@@ -4,6 +4,9 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
 import 'config.dart';
+import 'screens/statistics_dashboard.dart';
+import 'screens/metrics_debug_screen.dart';
+import 'screens/shared_preferences_viewer.dart';
 
 class UploadCSVScreen extends StatefulWidget {
   const UploadCSVScreen({super.key});
@@ -259,6 +262,42 @@ class _UploadCSVScreenState extends State<UploadCSVScreen>
         ),
         actions: [
           IconButton(
+            icon: Icon(Icons.storage, color: Color(0xFFd1d5db)),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => SharedPreferencesViewer(),
+                ),
+              );
+            },
+            tooltip: 'View SharedPreferences',
+          ),
+          IconButton(
+            icon: Icon(Icons.bug_report, color: Color(0xFFd1d5db)),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => MetricsDebugScreen(),
+                ),
+              );
+            },
+            tooltip: 'Debug Metrics Viewer',
+          ),
+          IconButton(
+            icon: Icon(Icons.analytics, color: Color(0xFFd1d5db)),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => StatisticsDashboard(),
+                ),
+              );
+            },
+            tooltip: 'Statistical Analysis Dashboard',
+          ),
+          IconButton(
             icon: _isRefreshing
                 ? SizedBox(
                     width: 20,
@@ -492,6 +531,85 @@ class _UploadCSVScreenState extends State<UploadCSVScreen>
                       ),
                     ],
                   ],
+                ),
+              ),
+              SizedBox(height: 24),
+              // Statistical Analysis Card
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => StatisticsDashboard(),
+                    ),
+                  );
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color(0xFF6366f1), // Indigo
+                        Color(0xFF8b5cf6), // Purple
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0xFF6366f1).withOpacity(0.3),
+                        blurRadius: 20,
+                        offset: Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  padding: EdgeInsets.all(24),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Icon(
+                          Icons.analytics_rounded,
+                          color: Colors.white,
+                          size: 32,
+                        ),
+                      ),
+                      SizedBox(width: 20),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Statistical Analysis",
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              "View performance metrics, confidence intervals & validation",
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.white.withOpacity(0.9),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ],
+                  ),
                 ),
               ),
               SizedBox(height: 32),

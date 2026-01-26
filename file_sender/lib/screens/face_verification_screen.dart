@@ -3,6 +3,7 @@ import 'package:camera/camera.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:logger/logger.dart';
 import '../services/real_face_recognition_service.dart';
+import '../services/performance_metrics_service.dart';
 import '../user_screen.dart';
 
 class FaceVerificationScreen extends StatefulWidget {
@@ -15,6 +16,7 @@ class FaceVerificationScreen extends StatefulWidget {
 class _FaceVerificationScreenState extends State<FaceVerificationScreen> with WidgetsBindingObserver {
   final Logger _logger = Logger();
   final RealFaceRecognitionService _faceAuthService = RealFaceRecognitionService();
+  final PerformanceMetricsService _metricsService = PerformanceMetricsService();
 
   CameraController? _cameraController;
   List<CameraDescription>? _cameras;
@@ -134,6 +136,9 @@ class _FaceVerificationScreenState extends State<FaceVerificationScreen> with Wi
       return;
     }
 
+    // Start timing for total authentication process
+    final authStopwatch = Stopwatch()..start();
+
     setState(() {
       _isProcessing = true;
       _isVerifying = true;
@@ -153,6 +158,11 @@ class _FaceVerificationScreenState extends State<FaceVerificationScreen> with Wi
       final currentEmbedding = await _faceAuthService.extractFaceEmbeddingFromFile(xFile.path);
 
       if (currentEmbedding == null) {
+        authStopwatch.stop();
+        await _metricsService.recordAuthTime(
+          authStopwatch.elapsedMilliseconds / 1000.0,
+          success: false,
+        );
         setState(() {
           _isProcessing = false;
           _isVerifying = false;
@@ -164,6 +174,11 @@ class _FaceVerificationScreenState extends State<FaceVerificationScreen> with Wi
 
       // Verify face with stored embedding
       if (_storedEmbedding == null) {
+        authStopwatch.stop();
+        await _metricsService.recordAuthTime(
+          authStopwatch.elapsedMilliseconds / 1000.0,
+          success: false,
+        );
         setState(() {
           _isProcessing = false;
           _isVerifying = false;
@@ -178,7 +193,17 @@ class _FaceVerificationScreenState extends State<FaceVerificationScreen> with Wi
 
       final isVerified = await _faceAuthService.verifyFace(currentEmbedding, _storedEmbedding!);
 
-      _logger.i('Real face verification result: $isVerified (similarity: $similarity)');
+      authStopwatch.stop();
+      final totalAuthTime = authStopwatch.elapsedMilliseconds / 1000.0;
+      
+      // Record total authentication time
+      await _metricsService.recordAuthTime(totalAuthTime, success: isVerified);
+      
+      if (isVerified) {
+        await _metricsService.recordSuccessfulAuth();
+      }
+
+      _logger.i('Real face verification result: $isVerified (similarity: $similarity, time: ${totalAuthTime.toStringAsFixed(3)}s)');
 
       if (isVerified) {
         _logger.i('Face verification successful for $_regNo');
@@ -187,6 +212,11 @@ class _FaceVerificationScreenState extends State<FaceVerificationScreen> with Wi
         _handleVerificationFailure();
       }
     } catch (e) {
+      authStopwatch.stop();
+      await _metricsService.recordAuthTime(
+        authStopwatch.elapsedMilliseconds / 1000.0,
+        success: false,
+      );
       _logger.e('Error during real face verification: $e');
       setState(() {
         _isProcessing = false;

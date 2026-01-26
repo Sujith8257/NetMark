@@ -6,7 +6,12 @@ import 'config.dart';
 import 'face_verification_modal.dart';
 import 'services/firestore_service.dart';
 import 'services/firebase_auth_service.dart';
+import 'package:file_sender/services/shared_preferences_debug_service.dart';
 
+// In your widget:
+printDebugInfo() async {
+  await SharedPreferencesDebugService.printDebugInfo();
+}
 class UserScreen extends StatefulWidget {
   const UserScreen({super.key});
 
@@ -25,6 +30,12 @@ class _UserScreenState extends State<UserScreen>
   bool _userFound = false;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
+  
+  // Debug panel state
+  bool _showDebugPanel = false;
+  Map<String, dynamic>? _debugUserData;
+  Map<String, dynamic>? _debugEmbeddingStats;
+  bool _debugLoading = false;
 
   @override
   void initState() {
@@ -35,6 +46,63 @@ class _UserScreenState extends State<UserScreen>
     );
     _fadeAnimation =
         Tween<double>(begin: 0.0, end: 1.0).animate(_animationController);
+    _loadDebugInfo();
+  }
+  
+  Future<void> _loadDebugInfo() async {
+    setState(() => _debugLoading = true);
+    try {
+      final userData = await SharedPreferencesDebugService.getUserRegistrationData();
+      final embeddingStats = await SharedPreferencesDebugService.getEmbeddingStats();
+      setState(() {
+        _debugUserData = userData;
+        _debugEmbeddingStats = embeddingStats;
+      });
+    } catch (e) {
+      _logger.e('Error loading debug info: $e');
+    } finally {
+      setState(() => _debugLoading = false);
+    }
+  }
+  
+  Future<void> _clearAllData() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Color(0xFF1f2937),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Clear All Data?',
+          style: TextStyle(color: Color(0xFFef4444), fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'This will delete all stored user data and embeddings. This is only for testing.',
+          style: TextStyle(color: Color(0xFFd1d5db)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel', style: TextStyle(color: Color(0xFF9ca3af))),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Color(0xFFef4444)),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    
+    if (confirm == true) {
+      await SharedPreferencesDebugService.clearAllPreferences();
+      await _loadDebugInfo();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('All data cleared'),
+          backgroundColor: Color(0xFF10b981),
+        ),
+      );
+    }
   }
 
   Future<void> fetchUserDetails(String uniqueId) async {
@@ -495,6 +563,37 @@ class _UserScreenState extends State<UserScreen>
     );
   }
 
+  Widget _debugInfoRow(String label, String value) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: Color(0xFF9ca3af),
+              fontSize: 12,
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: TextStyle(
+                color: Color(0xFFf9fafb),
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
@@ -792,6 +891,156 @@ class _UserScreenState extends State<UserScreen>
                       ],
                     ),
                   ),
+
+                // Debug Panel
+                Container(
+                  margin: EdgeInsets.only(top: 32),
+                  decoration: BoxDecoration(
+                    color: Color(0xFF1f2937),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Color(0xFF374151),
+                      width: 1,
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      // Debug header (clickable)
+                      GestureDetector(
+                        onTap: () => setState(() => _showDebugPanel = !_showDebugPanel),
+                        child: Container(
+                          padding: EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Color(0xFF111827),
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(16),
+                              topRight: Radius.circular(16),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Icons.info_outline, color: Color(0xFF818cf8), size: 20),
+                                  SizedBox(width: 12),
+                                  Text(
+                                    'Debug Panel',
+                                    style: TextStyle(
+                                      color: Color(0xFF818cf8),
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Icon(
+                                _showDebugPanel ? Icons.expand_less : Icons.expand_more,
+                                color: Color(0xFF818cf8),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      
+                      // Debug content (expandable)
+                      if (_showDebugPanel)
+                        Container(
+                          padding: EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Color(0xFF1f2937),
+                            borderRadius: BorderRadius.only(
+                              bottomLeft: Radius.circular(16),
+                              bottomRight: Radius.circular(16),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // User Data Section
+                              Text(
+                                '📱 Stored User Data:',
+                                style: TextStyle(
+                                  color: Color(0xFFf9fafb),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              SizedBox(height: 8),
+                              if (_debugUserData != null) ...[
+                                _debugInfoRow('Name', _debugUserData!['name']?.toString() ?? '—'),
+                                _debugInfoRow('Reg No', _debugUserData!['registrationNumber']?.toString() ?? '—'),
+                                _debugInfoRow('Device ID', (_debugUserData!['deviceId']?.toString() ?? '—').substring(0, 20) + '...'),
+                                _debugInfoRow('Embedding Stored', _debugUserData!['hasEmbedding'] == true ? '✅ Yes' : '❌ No'),
+                              ] else
+                                Text(
+                                  'No user data found',
+                                  style: TextStyle(color: Color(0xFF9ca3af), fontSize: 12),
+                                ),
+                              
+                              SizedBox(height: 16),
+                              Divider(color: Color(0xFF374151)),
+                              SizedBox(height: 16),
+                              
+                              // Embedding Stats Section
+                              Text(
+                                '🧠 Embedding Statistics:',
+                                style: TextStyle(
+                                  color: Color(0xFFf9fafb),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              SizedBox(height: 8),
+                              if (_debugEmbeddingStats != null) ...[
+                                _debugInfoRow('Size', _debugEmbeddingStats!['embeddingSize']?.toString() ?? '—'),
+                                _debugInfoRow('Mean', (_debugEmbeddingStats!['mean'] as double?)?.toStringAsFixed(4) ?? '—'),
+                                _debugInfoRow('Std Dev', (_debugEmbeddingStats!['stdDev'] as double?)?.toStringAsFixed(4) ?? '—'),
+                                _debugInfoRow('Min', (_debugEmbeddingStats!['min'] as double?)?.toStringAsFixed(4) ?? '—'),
+                                _debugInfoRow('Max', (_debugEmbeddingStats!['max'] as double?)?.toStringAsFixed(4) ?? '—'),
+                              ] else
+                                Text(
+                                  'No embedding data found',
+                                  style: TextStyle(color: Color(0xFF9ca3af), fontSize: 12),
+                                ),
+                              
+                              SizedBox(height: 16),
+                              
+                              // Action buttons
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  ElevatedButton.icon(
+                                    icon: Icon(Icons.refresh, size: 16),
+                                    label: Text('Refresh'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Color(0xFF818cf8),
+                                      foregroundColor: Colors.white,
+                                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                      visualDensity: VisualDensity.compact,
+                                    ),
+                                    onPressed: _loadDebugInfo,
+                                  ),
+                                  ElevatedButton.icon(
+                                    icon: Icon(Icons.delete_outline, size: 16),
+                                    label: Text('Clear Data'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Color(0xFFef4444),
+                                      foregroundColor: Colors.white,
+                                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                      visualDensity: VisualDensity.compact,
+                                    ),
+                                    onPressed: _clearAllData,
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+
                 SizedBox(height: 40), // Add bottom spacing
               ],
             ),
