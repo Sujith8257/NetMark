@@ -86,20 +86,21 @@ NetMark is a comprehensive attendance management system designed for educational
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    NetMark Architecture                      │
+│                    NetMark Architecture                     │
 └─────────────────────────────────────────────────────────────┘
 
 ┌──────────────┐         ┌──────────────┐         ┌──────────────┐
 │   Flutter    │ ◄─────► │  Flask API   │ ◄─────► │   CSV Files  │
-│   Client     │  HTTP   │   Server     │  Read/  │  (Local DB)  │
-│              │         │              │  Write  │              │
+│   Client     │  HTTP   │   Server     │  Read   │  (Local DB)  │
+│              │         │              │         │              │
 └──────────────┘         └──────────────┘         └──────────────┘
       │                         │                         │
       │                         │                         │
       ▼                         ▼                         ▼
 ┌──────────────┐         ┌──────────────┐         ┌──────────────┐
-│   Firebase   │         │   Cloud      │         │   Offline     │
-│  Auth & DB   │         │  Sync Service│         │   Storage     │
+│   Firebase   │         │   Cloud      │         │   Shared     │
+│  Auth & DB   │         │ Sync Service │         │ Preferences  |
+│              |         |              |         | (app storage)|
 └──────────────┘         └──────────────┘         └──────────────┘
 ```
 
