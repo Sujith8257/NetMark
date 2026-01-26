@@ -1059,12 +1059,6 @@ If you encounter issues not covered here:
 
 ---
 
-## 📄 License
-
-This project is for **educational use**. Add a license file if you plan to distribute it.
-
----
-
 <div align="center">
 
 **Made with ❤️ for educational institutions**
