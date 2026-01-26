@@ -426,10 +426,10 @@ Additional columns like `Slot 4`, `Section`, and `FA` are optional and will be p
 
 **Example**:
 ```csv
-Registration Number,Name,Slot 4,Section,FA
-99220041246,MAKIREDDYGARI HARITHA,Slot 4,S13,RESHNI S
-99220041253,MARELLA MARUTHI NAVADEEP,Slot 4,S13,RESHNI S
-99220041389,TANGUTURI VENKATA SUJITH GOPI,Slot 4,S13,RESHNI S
+Registration Number,Name
+99220041246,MAKIREDDYGARI HARITHA
+99220041253,MARELLA MARUTHI NAVADEEP
+99220041389,TANGUTURI VENKATA SUJITH GOPI
 ```
 
 ---
@@ -760,10 +760,10 @@ This generates `lib/firebase_options.dart` automatically.
 Create `test_class_list.csv` in the root directory:
 
 ```csv
-Registration Number,Name,Slot 4,Section,FA
-99220041246,MAKIREDDYGARI HARITHA,Slot 4,S13,RESHNI S
-99220041253,MARELLA MARUTHI NAVADEEP,Slot 4,S13,RESHNI S
-99220041389,TANGUTURI VENKATA SUJITH GOPI,Slot 4,S13,RESHNI S
+Registration Number,Name
+99220041246,MAKIREDDYGARI HARITHA
+99220041253,MARELLA MARUTHI NAVADEEP
+99220041389,TANGUTURI VENKATA SUJITH GOPI
 ```
 
 > ⚠️ **Note**: Ensure headers match exactly: `Registration Number` and `Name` (case-sensitive). Additional columns like `Slot 4`, `Section`, and `FA` are optional.
